@@ -1,11 +1,94 @@
-name: FirstCI
-on: 
+name: Advanced CI/CD Workflow
+
+# Trigger the workflow on push or manually
+on:
   push:
-    branches: [main]
-jobs: 
+    branches:
+      - main
+  workflow_dispatch: # Manual trigger from GitHub UI
+
+jobs:
+  # Matrix build job: Runs tests on multiple Node.js versions
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [14, 16, 18]  # Run tests on Node.js versions 14, 16, and 18
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+      - name: Cache Node modules
+        uses: actions/cache@v2
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-results-${{ matrix.node }}
+          path: test-results/
+
+  # Build job: Creates a production build and deploys it
   build:
-    runs-on: windows-latest 
-    steps: 
-      - uses: actions/checkout@v2
-      - name: Run a one-line script
-        run: write-host Hello, world!
+    runs-on: ubuntu-latest
+    needs: test  # Make sure tests pass before proceeding
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: build-artifacts
+          path: build/
+
+  # Deploy job: Deploys the build to a staging server (runs only on successful build)
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build  # Make sure build job is successful before deploying
+    if: success()  # Only deploy if previous jobs succeed
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Deploy to staging
+        run: |
+          echo "Deploying to staging server"
+          # Add your deployment script here (e.g., SCP, FTP, etc.)
+
+  # Notifications job: Sends a notification on successful or failed workflow
+  notify:
+    runs-on: ubuntu-latest
+    needs: [build, deploy]  # Wait for build and deploy jobs to finish
+    steps:
+      - name: Send success notification
+        if: success()  # Only runs if all previous jobs were successful
+        run: echo "Deployment successful! Notifying team."
+
+      - name: Send failure notification
+        if: failure()  # Only runs if any previous job failed
+        run: echo "Deployment failed! Notifying team."
