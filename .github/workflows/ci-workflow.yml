@@ -1,20 +1,47 @@
-name: Use Secrets and Environments
+name: Advanced CI/CD
 
 on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    environment: staging
+    strategy:
+      matrix:
+        node-version: [16, 18]
+        environment: [staging]
+
+    environment: ${{ matrix.environment }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Use Environment Secret
-        run: echo "The API key is $API_KEY"
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Display Environment Info
+        run: |
+          echo "Environment: ${{ matrix.environment }}"
+          echo "Node.js Version: ${{ matrix.node-version }}"
+
+      - name: Check Secret Availability
+        run: |
+          if [ -z "${{ secrets.API_KEY }}" ]; then
+            echo "Error: API_KEY secret is not set for the environment ${{ matrix.environment }}"
+            exit 1
+          fi
+
+      - name: Deploy Application
+        run: |
+          echo "Deploying to ${{ matrix.environment }} environment with Node.js ${{ matrix.node-version }}"
+          echo "API Key: ${{ secrets.API_KEY }}"
         env:
-          API_KEY: ${{ secrets.API_KEY }} 
+          API_KEY: ${{ secrets.API_KEY }}
