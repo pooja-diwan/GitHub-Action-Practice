@@ -1,17 +1,20 @@
-name: Simple CI on Push
+name: Use Secrets and Environments
 
 on:
   push:
     branches:
-      - main  
+      - main
 
 jobs:
-  build:
-    runs-on: ubuntu-latest  
+  deploy:
+    runs-on: ubuntu-latest
+    environment: staging
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2  
+        uses: actions/checkout@v2
 
-      - name: Display success message
-        run: echo "CI workflow completed successfully!"
+      - name: Use Environment Secret
+        run: echo "The API key is $API_KEY"
+        env:
+          API_KEY: ${{ secrets.API_KEY }} 
