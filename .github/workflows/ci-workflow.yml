@@ -7,9 +7,6 @@ on:
   pull_request:
     branches:
       - main
-    types:
-      - opened
-      - closed
 
 jobs:
   build-and-deploy:
